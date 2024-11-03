@@ -2,7 +2,7 @@ function updateProgress(value, id) {
   // Get the circle and text elements by their IDs
   const circle = document.getElementById(id);
   const text = document.getElementById(id + '-text');
-  
+
   // Calculate the circumference of the circle
   const radius = circle.r.baseVal.value;
   const circumference = 2 * Math.PI * radius;
@@ -66,3 +66,31 @@ setInterval(async () => {
     console.error('Error fetching data:', error);
   }
 }, 3000);
+
+// Uncomment the following lines to test the progress update function
+// updateProgress(25, 't');
+// updateProgress(50, 'h');
+
+// Check the local storage for theme preference on page load
+if (localStorage.getItem('theme') === 'dark') {
+  document.body.classList.add('dark', 'bg-zinc-800', 'text-gray-100');
+} else {
+  document.body.classList.add('bg-gray-100');
+}
+
+// Get the theme toggle button
+const themeToggle = document.getElementById('theme-toggle');
+// Toggle the theme when the button is clicked
+themeToggle.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  document.body.classList.toggle('bg-gray-100');
+  document.body.classList.toggle('bg-zinc-800');
+  document.body.classList.toggle('text-gray-100');
+
+  // Save the theme preference to local storage
+  if (document.body.classList.contains('dark')) {
+    localStorage.setItem('theme', 'dark');
+  } else {
+    localStorage.setItem('theme', 'light');
+  }
+});

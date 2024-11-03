@@ -1,5 +1,6 @@
 # SimpleDHT-app - Temperature and humidity on the web!
 
+![alt text](/photos/dashboard.png)
 ## Description
 
 An app based on [SimpleDHT library](https://github.com/winlinvip/SimpleDHT) for the DHT series of low-cost temperature & humidity sensors.
@@ -17,7 +18,8 @@ You can find DHT11 and DHT22 tutorials [here](https://learn.adafruit.com/dht).
 - **Temperature and Humidity Monitoring:** Real-time temperature and humidity data from DHT11 to any device!
 - **Documentation:** Tons of descriptive comments and helpful information.
 - **Customizable:** You can change everything from how the app works and integrates with the sensor to how it looks on your devices.
-- **Raw files:** Access to raw HTML, JavaScript and Tailwind CSS files [here](https://github.com/DynoW/SimpleDHT-app/blob/main/raw).
+- **Source files:** Access to source HTML, JavaScript and Tailwind CSS files [here](https://github.com/DynoW/SimpleDHT-app/blob/main/src).
+- **API:** Send data to anywhere in the world. (the route is /api)
 - **MIT license:** This app is open-source and uses one of the most permissive licenses so you can use it on any project.
 
 ## Connections
@@ -85,6 +87,10 @@ Connect to the same network and access: [http://esp32.local](http://esp32.local)
 2. [Arduino #4469: Add SimpleDHT library.](https://github.com/arduino/Arduino/issues/4469)
 3. [DHT11 datasheet and protocol.](https://www.mouser.com/datasheet/2/758/DHT11-Technical-Data-Sheet-Translated-Version-1143054.pdf)
 4. [DHT22 datasheet and protocol.](https://www.sparkfun.com/datasheets/Sensors/Temperature/DHT22.pdf)
+
+## Working with the source files
+
+Install Tailwind CSS with `npm install -D tailwindcss` and run `npx tailwindcss -i ./src/input.css -o ./src/output.css --watch`
 
 ## Credits
 
