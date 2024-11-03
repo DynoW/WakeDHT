@@ -77,6 +77,8 @@ and a [ci.json](https://github.com/DynoW/SimpleDHT-app/blob/main/ci.json) file a
 
 Upload to your microcontroller! ▶️
 
+Connect to the same network and access: [http://esp32.local](http://esp32.local)
+
 ## Links
 
 1. [adafruit/DHT-sensor-library](https://github.com/adafruit/DHT-sensor-library)
