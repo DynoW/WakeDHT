@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ambient temperature and humidity</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex flex-col items-center gap-10 mt-10 bg-gray-100">
+  <div class="flex flex-row container justify-around">
+    <!-- It will show weird on screens smaller than 400px width (fix: you can change size of the svg) -->
+    <div>
+      <h1 id="t-heading" class="text-2xl font-semibold text-center">Temperature :</h1>
+      <div class="relative flex items-center justify-center h-52 w-52">
+        <svg class="transform -rotate-90 w-full h-full">
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#e5e7eb" stroke-width="12" />
+          <circle id="t" cx="100" cy="100" r="90" fill="none" stroke="#4caf50" stroke-width="12" stroke-linecap="round"
+            stroke-dasharray="565.48" stroke-dashoffset="565.48" style="transition: stroke-dashoffset 1s ease;" />
+        </svg>
+        <div class="absolute text-2xl font-bold text-gray-700 text-center" id="t-text">0&#8451;</div>
+      </div>
+    </div>
+    <div>
+      <h1 id="h-heading" class="text-2xl font-semibold text-center">Humidity :</h1>
+      <div class="relative flex items-center justify-center h-52 w-52">
+        <svg class="transform -rotate-90 w-full h-full">
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#e5e7eb" stroke-width="12" />
+          <circle id="h" cx="100" cy="100" r="90" fill="none" stroke="#4caf50" stroke-width="12" stroke-linecap="round"
+            stroke-dasharray="565.48" stroke-dashoffset="565.48" style="transition: stroke-dashoffset 1s ease;" />
+        </svg>
+        <div class="absolute text-2xl font-bold text-gray-700 text-center" id="h-text">0&#37;</div>
+      </div>
+    </div>
+  </div>
+  <script src="/script.js"></script>
+</body>
+</html>
