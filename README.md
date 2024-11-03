@@ -24,8 +24,7 @@ You can find DHT11 and DHT22 tutorials [here](https://learn.adafruit.com/dht).
 
 Below, you can find the **schematic** and an example using DHT11 and ESP32-S2 mini:
 
-![schematic](/photos/schematic.png)
-<img align="right" alt="example" src="/photos/example.jpg" width="200px"/>
+<img alt="schematic" src="/photos/schematic.png" /><img align="right" alt="example" src="/photos/example.jpg" width="200px"/>
 
 ## Library Installation
 
