@@ -1,5 +1,12 @@
 {
+  "scripts": {
+    "start-server": "lite-server",
+    "tailwind-watch": "tailwindcss -i ./input.css -o ./output.css --watch",
+    "dev": "concurrently \"npm run start-server\" \"npm run tailwind-watch\""
+  },
   "devDependencies": {
+    "concurrently": "^9.0.1",
+    "lite-server": "^2.6.1",
     "tailwindcss": "^3.4.14"
   }
 }

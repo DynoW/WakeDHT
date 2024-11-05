@@ -90,7 +90,12 @@ Connect to the same network and access: [http://esp32.local](http://esp32.local)
 
 ## Working with the source files
 
-Install Tailwind CSS with `npm install -D tailwindcss` and run `npx tailwindcss -i ./src/input.css -o ./src/output.css --watch`
+Install depencencies with and run
+
+```
+npm i
+npm run dev
+```
 
 ## Credits
 

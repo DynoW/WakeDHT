@@ -55,21 +55,40 @@ function updateProgress(value, id) {
   text.innerHTML = value + (id === 't' ? '&#8451;' : '&#37') + '<br>' + condition.label;
 }
 
-// Fetch data from the API and update the progress every 3 seconds
-setInterval(async () => {
-  try {
-    const response = await fetch('/api');
-    const data = await response.json();
-    updateProgress(data.temperature, 't');
-    updateProgress(data.humidity, 'h');
-  } catch (error) {
-    console.error('Error fetching data:', error);
-  }
+// Get the status text by their element ID
+statusText = document.getElementById('status');
+
+// Fetch data from the API, update the progress and change the status every 3 seconds (In development you don't need to fetch data from the API, you can use the updateProgress function to test the progress update)
+function getTempAndHumidity() {
+  fetch('http://esp32.local/api')
+    .then(response => response.json())
+    .then(data => {
+      updateProgress(data.temperature, 't');
+      updateProgress(data.humidity, 'h');
+      statusText.innerHTML = 'Connected';
+      statusText.style.color = 'green';
+    })
+    .catch(error => {
+      console.error('Error fetching data:', error);
+      statusText.innerHTML = 'Disconnected';
+      statusText.style.color = 'red';
+    });
+}
+setInterval(() => {
+  getTempAndHumidity();
 }, 3000);
 
-// Uncomment the following lines to test the progress update function
-// updateProgress(25, 't');
-// updateProgress(50, 'h');
+// Test the progress update function in while development
+// This function generates random values for temperature and humidity every 3 seconds to simulate the api
+// function random(min, max) {
+//   return Math.floor(Math.random() * (max - min + 1)) + min;
+// }
+// setInterval(() => {
+//   updateProgress(random(24, 30), 't');
+//   updateProgress(random(50, 60), 'h');
+//   statusText.innerHTML = 'Connected';
+//   statusText.style.color = 'green';
+// }, 3000);
 
 // Check the local storage for theme preference on page load
 if (localStorage.getItem('theme') === 'dark') {

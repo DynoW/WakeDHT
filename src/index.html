@@ -4,11 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ambient temperature and humidity</title>
-  <link href="./output.css" rel="stylesheet">
+  <meta name="description" content="Display ambient temperature and humidity">
+  <link href="output.css" rel="stylesheet">
+  <link rel="icon" href="favicon.svg">
 </head>
-<body class="flex flex-col items-center mt-10">
-  <div class="text-center">
-    <button id="theme-toggle"
+<body class="flex flex-col items-center h-screen">
+  <div class="text-center mt-10 md:mt-5 lg:mt-10">
+    <button id="theme-toggle" aria-label="theme toggle"
       class="p-2 bg-gray-200 rounded-full shadow-md hover:bg-gray-300 focus:outline-none dark:text-black">
       <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 24 24" class="dark:hidden">
         <g fill="currentColor" fill-rule="evenodd" clip-rule="evenodd">
@@ -48,6 +50,9 @@
       </div>
     </div>
   </div>
-  <script src="./script.js"></script>
+  <div class="absolute bottom-0 mb-5 text-gray-400">
+    <p>Status: <span id="status" style="color: red;">Disconnected</span></p>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>
