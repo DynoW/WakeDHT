@@ -1,13 +1,19 @@
 // Libraries for Wi-Fi & webserver
 #include <WiFi.h>
-#include <NetworkClient.h>
 #include <WebServer.h>
+#include <WiFiClient.h>
 
 // Setup mDNS: http://esp32.local
 #include <ESPmDNS.h>
 
 // DTH11 & DHT22 open-source library !installation required! (https://github.com/winlinvip/SimpleDHT)
 #include <SimpleDHT.h>
+
+// For Wake on LAN
+#include <WiFiUdp.h>
+
+// For JSON parsing
+#include <ArduinoJson.h>
 
 // Access point credentials
 #include "secrets.h"
@@ -24,6 +30,9 @@ byte humidity = 0;
 // Define the webserver on port 80
 WebServer server(80);
 
+// UDP instance for Wake on LAN
+WiFiUDP udp;
+
 // index.html
 String page = R"(
 <!DOCTYPE html>
@@ -32,7 +41,9 @@ String page = R"(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ambient temperature and humidity</title>
-  <link href="./output.css" rel="stylesheet">
+  <meta name="description" content="Display ambient temperature and humidity">
+  <link href="output.css" rel="stylesheet">
+  <link rel="icon" href="favicon.svg">
 </head>
 <body class="flex flex-col items-center h-screen">
   <div class="text-center mt-10 md:mt-5 lg:mt-10">
@@ -79,7 +90,7 @@ String page = R"(
   <div class="absolute bottom-0 mb-5 text-gray-400">
     <p>Status: <span id="status"></span></p>
   </div>
-  <script src="./script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
 )";
@@ -87,6 +98,18 @@ String page = R"(
 // Serve the index.html
 void htmlIndex() {
   server.send(200, "text/html", page);
+}
+
+// favicon.svg
+String favicon = R"(
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path fill="#9ca3af" d="M19 8a2 2 0 0 1 2 2v6.76c.61.55 1 1.35 1 2.24c0 1.66-1.34 3-3 3s-3-1.34-3-3c0-.89.39-1.69 1-2.24V10c0-1.1.9-2 2-2m0 1c-.55 0-1 .45-1 1v1h2v-1c0-.55-.45-1-1-1M5 20v-8H2l10-9l4.4 3.96A3.97 3.97 0 0 0 15 10v6c-.63.83-1 1.87-1 3l.1 1z"/>
+  </svg>
+)";
+
+// Serve the favicon.svg
+void htmlFavicon() {
+  server.send(200, "image/svg+xml", favicon);
 }
 
 // output.css
@@ -163,6 +186,7 @@ void htmlScript() {
   script += "setInterval(() => {";
   script += "  getTempAndHumidity();";
   script += "}, 3000);";
+  script += "getTempAndHumidity();";
   // Check the local storage for theme preference on page load
   script += "if (localStorage.getItem('theme') === 'dark') {";
   script += "document.body.classList.add('dark', 'bg-zinc-800', 'text-gray-100');";
@@ -192,6 +216,162 @@ void api() {
   // Allow any origin to access the api
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "application/json", data);
+}
+
+// Ping a computer to check if it's online
+void pingComputer() {
+  String ip = server.arg("ip");
+  bool isOnline = false;
+  
+  if (ip.length() > 0) {
+    // Simple connection test instead of ping
+    IPAddress target;
+    if (target.fromString(ip)) {
+      // Try to connect to common ports to check if the device is online
+      WiFiClient client;
+      client.setTimeout(500); // 500ms timeout
+      
+      // Try common ports: 80 (HTTP), 443 (HTTPS), 22 (SSH)
+      int ports[] = {80, 443, 22};
+      for (int i = 0; i < 3; i++) {
+        if (client.connect(target, ports[i])) {
+          client.stop();
+          isOnline = true;
+          break;
+        }
+        delay(100);
+      }
+    }
+  }
+  
+  String response = "{\"online\":" + String(isOnline ? "true" : "false") + "}";
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json", response);
+}
+
+// Send Wake on LAN magic packet
+void wakeOnLAN() {
+  // Get request body
+  String body = server.arg("plain");
+  
+  // Parse JSON
+  DynamicJsonDocument doc(256);
+  DeserializationError error = deserializeJson(doc, body);
+  
+  if (error) {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON\"}");
+    return;
+  }
+  
+  // Get MAC address from request
+  String macStr = doc["mac"].as<String>();
+  
+  // Convert MAC string to bytes (format: XX-XX-XX-XX-XX-XX)
+  byte mac[6];
+  if (!macAddressToBytes(macStr, mac)) {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid MAC address format\"}");
+    return;
+  }
+  
+  // Send Wake on LAN magic packet
+  bool success = sendWOL(mac);
+  
+  String response = "{\"success\":" + String(success ? "true" : "false") + "}";
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json", response);
+}
+
+// Convert MAC address string to bytes
+bool macAddressToBytes(String macStr, byte* mac) {
+  // Replace "-" with ":"
+  macStr.replace("-", ":");
+  
+  // Check if the MAC address is valid
+  if (macStr.length() != 17) {
+    return false;
+  }
+  
+  // Convert MAC address string to bytes
+  for (int i = 0; i < 6; i++) {
+    int index = i * 3;
+    String byteString = macStr.substring(index, index + 2);
+    mac[i] = strtol(byteString.c_str(), NULL, 16);
+  }
+  
+  return true;
+}
+
+// Send Wake on LAN magic packet
+bool sendWOL(byte* mac) {
+  // Create magic packet
+  byte magicPacket[102];
+  
+  // First 6 bytes of 0xFF
+  for (int i = 0; i < 6; i++) {
+    magicPacket[i] = 0xFF;
+  }
+  
+  // Repeat MAC address 16 times
+  for (int i = 0; i < 16; i++) {
+    int offset = i * 6 + 6;
+    for (int j = 0; j < 6; j++) {
+      magicPacket[offset + j] = mac[j];
+    }
+  }
+  
+  // Send packet to broadcast address
+  udp.beginPacket(IPAddress(255, 255, 255, 255), 9);
+  udp.write(magicPacket, sizeof(magicPacket));
+  return udp.endPacket() == 1;
+}
+
+// SSH to a computer and send shutdown command
+void shutdownComputer() {
+  // Get request body
+  String body = server.arg("plain");
+  
+  // Parse JSON
+  DynamicJsonDocument doc(512);
+  DeserializationError error = deserializeJson(doc, body);
+  
+  if (error) {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON\"}");
+    return;
+  }
+  
+  // Get IP address, username and password from request
+  String ip = doc["ip"].as<String>();
+  String username = doc["username"].as<String>();
+  String password = doc["password"].as<String>();
+  
+  // Validate parameters
+  if (ip.length() == 0 || username.length() == 0 || password.length() == 0) {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json", "{\"success\":false,\"message\":\"Missing parameters\"}");
+    return;
+  }
+  
+  // Note: Implementing a proper SSH client on ESP32 requires additional libraries
+  // This is a simplified implementation for demonstration purposes
+  
+  // For a real implementation, you would use something like:
+  // 1. ESP32 SSH client library (if available)
+  // 2. Set up a service on your network that can receive HTTP requests
+  //    and execute SSH commands on your behalf
+  
+  // For now, we'll simulate success but log a message
+  Serial.println("Shutdown request received for:");
+  Serial.println("IP: " + ip);
+  Serial.println("Username: " + username);
+  
+  // Return a success response (simulated)
+  String response = "{\"success\":true,\"message\":\"Shutdown command sent (simulated)\"}";
+  
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json", response);
 }
 
 // Serve 404 page
@@ -236,9 +416,13 @@ void setup(void) {
 
   // Create routes
   server.on("/", htmlIndex);
+  server.on("/favicon.svg", htmlFavicon);
   server.on("/output.css", htmlCSS);
   server.on("/script.js", htmlScript);
   server.on("/api", api);
+  server.on("/ping", pingComputer);
+  server.on("/wol", wakeOnLAN);
+  server.on("/ssh_shutdown", shutdownComputer);
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("HTTP server started");

@@ -1,4 +1,13 @@
 {
+  "name": "simpledht-app",
+  "version": "3.0",
+  "author": "Daniel C.",
+  "description": "Ambient temperature and humidity ⛅ from DHT11 or DHT22 sensor in your browser with dashboard and api",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DynoW/SimpleDHT-app.git"
+  },
   "scripts": {
     "start-server": "lite-server",
     "tailwind-watch": "tailwindcss -i ./input.css -o ./output.css --watch",
@@ -7,6 +16,9 @@
   "devDependencies": {
     "concurrently": "^9.0.1",
     "lite-server": "^2.6.1",
-    "tailwindcss": "^3.4.14"
+    "tailwindcss": "^4.1.10"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.10"
   }
 }

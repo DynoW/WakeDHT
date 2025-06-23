@@ -1,3 +1,26 @@
+// Check the local storage for theme preference on page load
+if (localStorage.getItem('theme') === 'dark' || 
+    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  document.body.classList.add('dark');
+} else {
+  document.body.classList.remove('dark');
+}
+
+// Get the theme toggle button
+const themeToggle = document.getElementById('theme-toggle');
+// Toggle the theme when the button is clicked
+themeToggle.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+
+  // Save the theme preference to local storage
+  if (document.body.classList.contains('dark')) {
+    localStorage.setItem('theme', 'dark');
+  } else {
+    localStorage.setItem('theme', 'light');
+  }
+});
+
+// Function to update the progress of the temperature and humidity circles
 function updateProgress(value, id) {
   // Get the circle and text elements by their IDs
   const circle = document.getElementById(id);
@@ -74,42 +97,142 @@ function getTempAndHumidity() {
       statusText.style.color = 'red';
     });
 }
-setInterval(() => {
-  getTempAndHumidity();
-}, 3000);
+
+// Comment this lines if you want to test the progress update function in while development
+// setInterval(() => {
+//   getTempAndHumidity();
+// }, 3000);
+// getTempAndHumidity();
 
 // Test the progress update function in while development
 // This function generates random values for temperature and humidity every 3 seconds to simulate the api
-// function random(min, max) {
-//   return Math.floor(Math.random() * (max - min + 1)) + min;
-// }
-// setInterval(() => {
-//   updateProgress(random(24, 30), 't');
-//   updateProgress(random(50, 60), 'h');
-//   statusText.innerHTML = 'Connected';
-//   statusText.style.color = 'green';
-// }, 3000);
+// Uncomment the following lines to test the progress update function
+function random(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+setInterval(() => {
+  updateProgress(random(24, 30), 't');
+  updateProgress(random(50, 60), 'h');
+  statusText.innerHTML = 'Connected';
+  statusText.style.color = 'green';
+}, 3000);
 
-// Check the local storage for theme preference on page load
-if (localStorage.getItem('theme') === 'dark') {
-  document.body.classList.add('dark', 'bg-zinc-800', 'text-gray-100');
-} else {
-  document.body.classList.add('bg-gray-100');
+// Computer management section
+// Define the computers
+const computers = [
+  { name: 'home', mac: '08-97-98-EE-02-85', ip: '192.168.1.200', username: 'home' },
+  { name: 'home2', mac: '44-39-C4-95-AB-C1', ip: '192.168.1.222', username: 'home2' }
+];
+
+// Function to check if a computer is online (using ping via API)
+async function checkComputerStatus() {
+  for (const computer of computers) {
+    try {
+      const response = await fetch(`http://esp32.local/ping?ip=${computer.ip}`);
+      const data = await response.json();
+      
+      const statusElement = document.getElementById(`status-${computer.name}`);
+      if (data.online) {
+        statusElement.textContent = 'Online';
+        statusElement.className = 'inline-block px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      } else {
+        statusElement.textContent = 'Offline';
+        statusElement.className = 'inline-block px-2 py-1 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      }
+    } catch (error) {
+      console.error(`Error checking status for ${computer.name}:`, error);
+      const statusElement = document.getElementById(`status-${computer.name}`);
+      statusElement.textContent = 'Unknown';
+      statusElement.className = 'inline-block px-2 py-1 rounded-full bg-gray-200 text-gray-800 dark:bg-zinc-600 dark:text-gray-200';
+    }
+  }
 }
 
-// Get the theme toggle button
-const themeToggle = document.getElementById('theme-toggle');
-// Toggle the theme when the button is clicked
-themeToggle.addEventListener('click', () => {
-  document.body.classList.toggle('dark');
-  document.body.classList.toggle('bg-gray-100');
-  document.body.classList.toggle('bg-zinc-800');
-  document.body.classList.toggle('text-gray-100');
+// Function to send Wake on LAN magic packet
+async function wakeComputer(computerName) {
+  const computer = computers.find(c => c.name === computerName);
+  if (!computer) return;
 
-  // Save the theme preference to local storage
-  if (document.body.classList.contains('dark')) {
-    localStorage.setItem('theme', 'dark');
-  } else {
-    localStorage.setItem('theme', 'light');
+  try {
+    const response = await fetch('http://esp32.local/wol', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ mac: computer.mac }),
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      alert(`Wake-on-LAN packet sent to ${computer.name}`);
+    } else {
+      alert(`Failed to send Wake-on-LAN packet to ${computer.name}`);
+    }
+  } catch (error) {
+    console.error(`Error sending WOL to ${computer.name}:`, error);
+    alert(`Error sending Wake-on-LAN packet to ${computer.name}`);
   }
-});
+}
+
+// Function to shutdown a computer
+async function shutdownComputer(computerName) {
+  const computer = computers.find(c => c.name === computerName);
+  if (!computer) return;
+
+  // Confirm shutdown
+  if (!confirm(`Are you sure you want to shutdown ${computer.name}?`)) {
+    return;
+  }  try {
+    // First check if the computer is online
+    const pingResponse = await fetch(`http://esp32.local/ping?ip=${computer.ip}`);
+    const pingData = await pingResponse.json();
+    
+    if (!pingData.online) {
+      alert(`Cannot shutdown ${computer.name} - computer appears to be offline.`);
+      return;
+    }
+    
+    // Send the shutdown request through ESP32
+    const response = await fetch('http://esp32.local/ssh_shutdown', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },      body: JSON.stringify({
+        ip: computer.ip,
+        username: computer.username,
+        // Password should be handled securely on the server side
+        // Never store passwords in client-side code
+      }),
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      alert(`Shutdown command sent to ${computer.name}`);
+    } else {
+      alert(`Failed to shutdown ${computer.name}: ${data.message || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error(`Error shutting down ${computer.name}:`, error);
+    alert(`Error shutting down ${computer.name}`);
+  }
+}
+
+// Add event listeners to all WOL and shutdown buttons
+function setupComputerButtons() {
+  for (const computer of computers) {
+    const wolButton = document.getElementById(`wol-${computer.name}`);
+    const shutdownButton = document.getElementById(`shutdown-${computer.name}`);
+    
+    wolButton.addEventListener('click', () => wakeComputer(computer.name));
+    shutdownButton.addEventListener('click', () => shutdownComputer(computer.name));
+  }
+}
+
+// // Initialize
+// setupComputerButtons();
+// checkComputerStatus();
+
+// // Check computer status every 30 seconds
+// setInterval(() => {
+//   checkComputerStatus();
+// }, 30000);
