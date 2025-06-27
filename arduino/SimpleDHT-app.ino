@@ -1,7 +1,6 @@
 // Libraries for Wi-Fi & webserver
 #include <WiFi.h>
 #include <WebServer.h>
-#include <WiFiClient.h>
 
 // Setup mDNS: http://esp32.local
 #include <ESPmDNS.h>
@@ -11,9 +10,6 @@
 
 // For Wake on LAN
 #include <WiFiUdp.h>
-
-// For JSON parsing
-#include <ArduinoJson.h>
 
 // Access point credentials
 #include "secrets.h"
@@ -45,7 +41,7 @@ String page = R"(
   <link href="output.css" rel="stylesheet">
   <link rel="icon" href="favicon.svg">
 </head>
-<body class="flex flex-col items-center h-screen">
+<body class="flex flex-col items-center h-dvh">
   <div class="text-center mt-10 md:mt-5 lg:mt-10">
     <button id="theme-toggle"
       class="p-2 bg-gray-200 rounded-full shadow-md hover:bg-gray-300 focus:outline-none dark:text-black">
@@ -90,6 +86,26 @@ String page = R"(
   <div class="absolute bottom-0 mb-5 text-gray-400">
     <p>Status: <span id="status"></span></p>
   </div>
+  
+  <!-- Computer Management Section -->
+  <div class="mt-20 w-full max-w-4xl px-5">
+    <h2 class="text-2xl font-semibold text-center mb-5">Computer Management</h2>
+    
+    <!-- Desktop header - hidden on mobile -->
+    <div class="hidden md:block bg-gray-200 dark:bg-zinc-800 rounded-t border-b border-gray-300 dark:border-gray-600">
+      <div class="grid grid-cols-6 p-3 gap-3 items-center font-semibold">
+        <div class="px-4 col-span-2">Name</div>
+        <div class="px-4 col-span-1">Status</div>
+        <div class="px-4 text-center col-span-3">Actions</div>
+      </div>
+    </div>
+    
+    <!-- Container for computer entries -->
+    <div id="computer-container" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-b md:rounded-none md:border-t-0">
+      <!-- Computer entries will be dynamically generated here -->
+    </div>
+  </div>
+  
   <script src="script.js"></script>
 </body>
 </html>
@@ -224,22 +240,28 @@ void pingComputer() {
   bool isOnline = false;
   
   if (ip.length() > 0) {
-    // Simple connection test instead of ping
     IPAddress target;
     if (target.fromString(ip)) {
-      // Try to connect to common ports to check if the device is online
+      // Try to connect to a common port to check if the device is online
       WiFiClient client;
-      client.setTimeout(500); // 500ms timeout
+      client.setTimeout(1000); // 1 second timeout
       
-      // Try common ports: 80 (HTTP), 443 (HTTPS), 22 (SSH)
-      int ports[] = {80, 443, 22};
-      for (int i = 0; i < 3; i++) {
-        if (client.connect(target, ports[i])) {
-          client.stop();
-          isOnline = true;
-          break;
+      // Try to connect to port 80 first (most common)
+      if (client.connect(target, 80)) {
+        client.stop();
+        isOnline = true;
+      } else {
+        // If port 80 fails, try ping-like approach using ICMP
+        // For ESP32, we'll use a simple TCP connection test on multiple ports
+        int ports[] = {443, 22, 3389, 5900}; // HTTPS, SSH, RDP, VNC
+        for (int i = 0; i < 4 && !isOnline; i++) {
+          if (client.connect(target, ports[i])) {
+            client.stop();
+            isOnline = true;
+            break;
+          }
+          delay(50);
         }
-        delay(100);
       }
     }
   }
@@ -251,21 +273,14 @@ void pingComputer() {
 
 // Send Wake on LAN magic packet
 void wakeOnLAN() {
-  // Get request body
-  String body = server.arg("plain");
+  // Get MAC address from query parameter (to match JavaScript expectations)
+  String macStr = server.arg("mac");
   
-  // Parse JSON
-  DynamicJsonDocument doc(256);
-  DeserializationError error = deserializeJson(doc, body);
-  
-  if (error) {
+  if (macStr.length() == 0) {
     server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON\"}");
+    server.send(400, "application/json", "{\"success\":false,\"message\":\"MAC address parameter missing\"}");
     return;
   }
-  
-  // Get MAC address from request
-  String macStr = doc["mac"].as<String>();
   
   // Convert MAC string to bytes (format: XX-XX-XX-XX-XX-XX)
   byte mac[6];
@@ -285,19 +300,31 @@ void wakeOnLAN() {
 
 // Convert MAC address string to bytes
 bool macAddressToBytes(String macStr, byte* mac) {
-  // Replace "-" with ":"
+  // Replace "-" with ":" and remove any spaces
   macStr.replace("-", ":");
+  macStr.replace(" ", "");
+  macStr.toUpperCase();
   
   // Check if the MAC address is valid
   if (macStr.length() != 17) {
+    Serial.println("Invalid MAC address length: " + String(macStr.length()));
     return false;
   }
   
   // Convert MAC address string to bytes
   for (int i = 0; i < 6; i++) {
     int index = i * 3;
+    if (index + 1 >= macStr.length()) {
+      Serial.println("MAC address format error at index: " + String(index));
+      return false;
+    }
     String byteString = macStr.substring(index, index + 2);
-    mac[i] = strtol(byteString.c_str(), NULL, 16);
+    long value = strtol(byteString.c_str(), NULL, 16);
+    if (value < 0 || value > 255) {
+      Serial.println("Invalid MAC byte value: " + byteString);
+      return false;
+    }
+    mac[i] = (byte)value;
   }
   
   return true;
@@ -321,57 +348,24 @@ bool sendWOL(byte* mac) {
     }
   }
   
-  // Send packet to broadcast address
+  // Print debug information
+  Serial.print("Sending WOL packet to MAC: ");
+  for (int i = 0; i < 6; i++) {
+    if (i > 0) Serial.print(":");
+    if (mac[i] < 16) Serial.print("0");
+    Serial.print(mac[i], HEX);
+  }
+  Serial.println();
+  
+  // Send packet to broadcast address on port 9 (standard WOL port)
   udp.beginPacket(IPAddress(255, 255, 255, 255), 9);
-  udp.write(magicPacket, sizeof(magicPacket));
-  return udp.endPacket() == 1;
-}
-
-// SSH to a computer and send shutdown command
-void shutdownComputer() {
-  // Get request body
-  String body = server.arg("plain");
+  int bytesWritten = udp.write(magicPacket, sizeof(magicPacket));
+  bool success = udp.endPacket() == 1;
   
-  // Parse JSON
-  DynamicJsonDocument doc(512);
-  DeserializationError error = deserializeJson(doc, body);
+  Serial.println("WOL packet sent: " + String(success ? "Success" : "Failed"));
+  Serial.println("Bytes written: " + String(bytesWritten));
   
-  if (error) {
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON\"}");
-    return;
-  }
-  
-  // Get IP address, username and password from request
-  String ip = doc["ip"].as<String>();
-  String username = doc["username"].as<String>();
-  String password = doc["password"].as<String>();
-  
-  // Validate parameters
-  if (ip.length() == 0 || username.length() == 0 || password.length() == 0) {
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.send(400, "application/json", "{\"success\":false,\"message\":\"Missing parameters\"}");
-    return;
-  }
-  
-  // Note: Implementing a proper SSH client on ESP32 requires additional libraries
-  // This is a simplified implementation for demonstration purposes
-  
-  // For a real implementation, you would use something like:
-  // 1. ESP32 SSH client library (if available)
-  // 2. Set up a service on your network that can receive HTTP requests
-  //    and execute SSH commands on your behalf
-  
-  // For now, we'll simulate success but log a message
-  Serial.println("Shutdown request received for:");
-  Serial.println("IP: " + ip);
-  Serial.println("Username: " + username);
-  
-  // Return a success response (simulated)
-  String response = "{\"success\":true,\"message\":\"Shutdown command sent (simulated)\"}";
-  
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "application/json", response);
+  return success;
 }
 
 // Serve 404 page
@@ -422,7 +416,6 @@ void setup(void) {
   server.on("/api", api);
   server.on("/ping", pingComputer);
   server.on("/wol", wakeOnLAN);
-  server.on("/ssh_shutdown", shutdownComputer);
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("HTTP server started");

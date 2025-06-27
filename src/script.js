@@ -1,6 +1,6 @@
 // Check the local storage for theme preference on page load
-if (localStorage.getItem('theme') === 'dark' || 
-    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+if (localStorage.getItem('theme') === 'dark' ||
+  (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
   document.body.classList.add('dark');
 } else {
   document.body.classList.remove('dark');
@@ -99,30 +99,59 @@ function getTempAndHumidity() {
 }
 
 // Comment this lines if you want to test the progress update function in while development
-// setInterval(() => {
-//   getTempAndHumidity();
-// }, 3000);
-// getTempAndHumidity();
+setInterval(() => {
+  getTempAndHumidity();
+}, 3000);
+getTempAndHumidity();
 
 // Test the progress update function in while development
 // This function generates random values for temperature and humidity every 3 seconds to simulate the api
 // Uncomment the following lines to test the progress update function
-function random(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-setInterval(() => {
-  updateProgress(random(24, 30), 't');
-  updateProgress(random(50, 60), 'h');
-  statusText.innerHTML = 'Connected';
-  statusText.style.color = 'green';
-}, 3000);
+// function random(min, max) {
+//   return Math.floor(Math.random() * (max - min + 1)) + min;
+// }
+// setInterval(() => {
+//   updateProgress(random(24, 30), 't');
+//   updateProgress(random(50, 60), 'h');
+//   statusText.innerHTML = 'Connected';
+//   statusText.style.color = 'green';
+// }, 3000);
 
 // Computer management section
 // Define the computers
 const computers = [
-  { name: 'home', mac: '08-97-98-EE-02-85', ip: '192.168.1.200', username: 'home' },
-  { name: 'home2', mac: '44-39-C4-95-AB-C1', ip: '192.168.1.222', username: 'home2' }
+  { name: 'home', mac: '08-97-98-EE-02-85', ip: '192.168.1.200'},
+  { name: 'home2', mac: '44-39-C4-95-AB-C1', ip: '192.168.1.222'}
 ];
+
+// Function to create computer divs dynamically
+function createComputerDivs() {
+  const container = document.getElementById('computer-container');
+  // Create computer entries
+  computers.forEach((computer, index) => {
+    const computerDiv = document.createElement('div');
+    const isLast = index === computers.length - 1;
+    computerDiv.className = isLast ? '' : 'border-b border-gray-300 dark:border-gray-600';
+    
+    computerDiv.innerHTML = `
+      <div class="grid md:grid-cols-6 grid-cols-1 p-3 gap-3 items-center">
+        <div class="px-4 font-medium md:font-normal md:col-span-2">
+          <span class="md:hidden font-bold mr-2">Name:</span>${computer.name}
+        </div>
+        <div class="px-4 md:col-span-1">
+          <span class="md:hidden font-bold mr-2">Status:</span><span id="status-${computer.name}" class="text-gray-600 dark:text-gray-400">Unknown</span>
+        </div>
+        <div class="px-4 flex justify-center gap-2 md:col-span-3">
+          <button id="wol-${computer.name}" class="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded cursor-pointer">
+            Power on
+          </button>
+        </div>
+      </div>
+    `;
+    
+    container.appendChild(computerDiv);
+  });
+}
 
 // Function to check if a computer is online (using ping via API)
 async function checkComputerStatus() {
@@ -130,20 +159,20 @@ async function checkComputerStatus() {
     try {
       const response = await fetch(`http://esp32.local/ping?ip=${computer.ip}`);
       const data = await response.json();
-      
+
       const statusElement = document.getElementById(`status-${computer.name}`);
       if (data.online) {
         statusElement.textContent = 'Online';
-        statusElement.className = 'inline-block px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        statusElement.className = 'text-green-600';
       } else {
         statusElement.textContent = 'Offline';
-        statusElement.className = 'inline-block px-2 py-1 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        statusElement.className = 'text-red-600';
       }
     } catch (error) {
       console.error(`Error checking status for ${computer.name}:`, error);
       const statusElement = document.getElementById(`status-${computer.name}`);
       statusElement.textContent = 'Unknown';
-      statusElement.className = 'inline-block px-2 py-1 rounded-full bg-gray-200 text-gray-800 dark:bg-zinc-600 dark:text-gray-200';
+      statusElement.className = 'text-gray-600 dark:text-gray-400';
     }
   }
 }
@@ -154,14 +183,8 @@ async function wakeComputer(computerName) {
   if (!computer) return;
 
   try {
-    const response = await fetch('http://esp32.local/wol', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ mac: computer.mac }),
-    });
-    
+    const response = await fetch(`http://esp32.local/wol?mac=${computer.mac}`);
+
     const data = await response.json();
     if (data.success) {
       alert(`Wake-on-LAN packet sent to ${computer.name}`);
@@ -174,65 +197,21 @@ async function wakeComputer(computerName) {
   }
 }
 
-// Function to shutdown a computer
-async function shutdownComputer(computerName) {
-  const computer = computers.find(c => c.name === computerName);
-  if (!computer) return;
-
-  // Confirm shutdown
-  if (!confirm(`Are you sure you want to shutdown ${computer.name}?`)) {
-    return;
-  }  try {
-    // First check if the computer is online
-    const pingResponse = await fetch(`http://esp32.local/ping?ip=${computer.ip}`);
-    const pingData = await pingResponse.json();
-    
-    if (!pingData.online) {
-      alert(`Cannot shutdown ${computer.name} - computer appears to be offline.`);
-      return;
-    }
-    
-    // Send the shutdown request through ESP32
-    const response = await fetch('http://esp32.local/ssh_shutdown', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },      body: JSON.stringify({
-        ip: computer.ip,
-        username: computer.username,
-        // Password should be handled securely on the server side
-        // Never store passwords in client-side code
-      }),
-    });
-    
-    const data = await response.json();
-    if (data.success) {
-      alert(`Shutdown command sent to ${computer.name}`);
-    } else {
-      alert(`Failed to shutdown ${computer.name}: ${data.message || 'Unknown error'}`);
-    }
-  } catch (error) {
-    console.error(`Error shutting down ${computer.name}:`, error);
-    alert(`Error shutting down ${computer.name}`);
-  }
-}
-
 // Add event listeners to all WOL and shutdown buttons
 function setupComputerButtons() {
   for (const computer of computers) {
     const wolButton = document.getElementById(`wol-${computer.name}`);
-    const shutdownButton = document.getElementById(`shutdown-${computer.name}`);
-    
+
     wolButton.addEventListener('click', () => wakeComputer(computer.name));
-    shutdownButton.addEventListener('click', () => shutdownComputer(computer.name));
   }
 }
 
-// // Initialize
-// setupComputerButtons();
-// checkComputerStatus();
+// Initialize
+createComputerDivs();
+setupComputerButtons();
+checkComputerStatus();
 
-// // Check computer status every 30 seconds
-// setInterval(() => {
-//   checkComputerStatus();
-// }, 30000);
+// Check computer status every 5 seconds
+setInterval(() => {
+  checkComputerStatus();
+}, 5000);
