@@ -1,6 +1,6 @@
 # WakeDHT - Temperature, Humidity and WoL
 
-![alt text](/photos/dashboard.png)
+![dashboard](/photos/dashboard.png)
 
 ## Description
 
