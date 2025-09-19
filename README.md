@@ -33,20 +33,20 @@ Below, you can find the **schematic** and an example using DHT11 and ESP32-S2 mi
 1. Install [Arduino CLI](https://arduino.github.io/arduino-cli/latest/installation/)
 
 2. Initialize config and add Espressif package index:
-```bash
+```powershell
 arduino-cli config init
 arduino-cli config set board_manager.additional_urls "https://espressif.github.io/arduino-esp32/package_esp32_index.json"
 ```
 
 3. Update indexes and install ESP32 core:
-```bash
+```powershell
 arduino-cli core update-index
 arduino-cli core install esp32:esp32
 arduino-cli core list
 ```
 
 4. Install required libraries (includes dependencies):
-```bash
+```powershell
 arduino-cli lib update-index
 arduino-cli lib install "SimpleDHT"
 arduino-cli lib list
@@ -72,7 +72,7 @@ Edit the computers array in [data/script.js](data/script.js):
 
 ### 4. Build and Upload
 1. Verify board FQBN and connected port:
-```bash
+```powershell
 arduino-cli board listall | grep esp32   # find available FQBNs for your board
 arduino-cli board list                           # shows connected ports (e.g. /dev/ttyUSB0 or COM9)
 ```
