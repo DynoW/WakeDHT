@@ -28,6 +28,12 @@ Below, you can find the **schematic** and an example using DHT11 and ESP32-S2 mi
 
 ### 2. Software Setup
 
+#### Clone this repository
+
+```powershell
+git clone https://github.com/DynoW/WakeDHT.git
+```
+
 #### Install ESP32 board & libraries (arduino-cli)
 
 1. Install [Arduino CLI](https://arduino.github.io/arduino-cli/latest/installation/)
