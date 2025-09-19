@@ -1,6 +1,6 @@
 # WakeDHT - Temperature, Humidity and WoL
 
-![alt text](/photos/dashboard2.png)
+![alt text](/photos/dashboard.png)
 
 ## Description
 
@@ -18,9 +18,9 @@ You can find DHT11 and DHT22 tutorials [here](https://learn.adafruit.com/dht).
   - C:\Users\YourName\AppData\Local\Arduino15\packages\esp32\tools\mkspiffs\0.2.3\mkspiffs.exe
 
 ### 1. Hardware Setup
-- **DHT11/DHT22 Sensor:** Connect to pin 14 on ESP32
+- **DHT11/DHT22 Sensor:** Connect to pin 14 on ESP32 (can be changed in [WakeDHT.ino](WakeDHT.ino))
 - **ESP32:** Any ESP32 board with Wi-Fi and SPIFFS (tested on ESP32-S2 mini)
-- **Breadboard and jumper wires:** For circuit connections (or just solder everything)
+- **Jumper wires, 5 kΩ resistor and breadboard:** For circuit connections (or just solder everything and skip the breadboard)
 
 Below, you can find the **schematic** and an example using DHT11 and ESP32-S2 mini:
 
@@ -130,6 +130,16 @@ The ESP32 provides RESTful API endpoints:
   ```json
   {"success":true}
   ```
+
+## Development mode
+
+In the [data/script.js](data/script.js) you can edit the
+
+```javascript
+const DEV_MODE = false;
+```
+
+and install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer), Visual Studio Code extension, to run the app with the live api from the ESP32
 
 ## 🔧 Troubleshooting
 

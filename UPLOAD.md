@@ -1,34 +1,56 @@
 # This tutorial is intended to give you my way of uploading the code to the board
 
-- `arduino-cli version`  
-    Show the installed arduino-cli version.
+- Show the installed arduino-cli version.
+```powershell
+    arduino-cli version
+``` 
 
-- `arduino-cli config init`  
-    Create a default arduino-cli config file.
+- Initialize a default arduino-cli config
+```bash
+arduino-cli config init
+```
 
-- `arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json`  
-    Add the ESP32 board manager URL so esp32 cores are available.
+- Add the ESP32 board manager URL
+```bash
+arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+```
 
-- `arduino-cli core update-index`  
-    Update the local cores index from configured board manager URLs.
+- Update the local cores index
+```bash
+arduino-cli core update-index
+```
 
-- `arduino-cli core install esp32:esp32`  
-    Install the ESP32 Arduino core.
+- Install the ESP32 Arduino core
+```bash
+arduino-cli core install esp32:esp32
+```
 
-- `arduino-cli lib install "SimpleDHT"`  
-    Install the SimpleDHT library required by the sketch.
+- Install the SimpleDHT library required by the sketch
+```bash
+arduino-cli lib install "SimpleDHT"
+```
 
-- `arduino-cli board list`  
-    List connected boards and available serial ports.
+- List connected boards and available serial ports
+```bash
+arduino-cli board list
+```
 
-- `arduino-cli compile --fqbn esp32:esp32:lolin_s2_mini --build-property "build.partitions=default" --build-property "upload.maximum_size=1048576" WakeDHT.ino`  
-    Compile WakeDHT.ino for the LoLin S2 Mini board, setting partition table and maximum upload size.
+- Compile WakeDHT.ino for LoLin S2 Mini with specific partition and upload size
+```bash
+arduino-cli compile --fqbn esp32:esp32:lolin_s2_mini --build-property "build.partitions=default" --build-property "upload.maximum_size=1048576" WakeDHT.ino
+```
 
-- `arduino-cli upload --fqbn esp32:esp32:lolin_s2_mini --port <PORT> WakeDHT.ino`  
-    Upload the compiled sketch to the board. Replace `<PORT>` with your serial port (e.g., `COM3` or `/dev/ttyUSB0`).
+- Upload the compiled sketch (replace <PORT> with your serial port, e.g., COM3 or /dev/ttyUSB0)
+```bash
+arduino-cli upload --fqbn esp32:esp32:lolin_s2_mini --port <PORT> WakeDHT.ino
+```
 
-- `mkspiffs -c data -b 4096 -p 256 -s 0x160000 spiffs.bin`  
-    Create a SPIFFS image (`spiffs.bin`) from the `data` folder. Tool executable path varies by platform; this shows the generic invocation.
+- Create a SPIFFS image from the data folder
+```bash
+mkspiffs -c data -b 4096 -p 256 -s 0x160000 spiffs.bin
+```
 
-- `esptool.py --chip esp32s2 --port <PORT> --baud 921600 --before default_reset --after hard_reset write_flash -z 0x290000 spiffs.bin`  
-    Flash the SPIFFS image to the device at address `0x290000`. Replace `<PORT>` with your device port.
+- Flash the SPIFFS image to the device (replace <PORT> with your device port)
+```bash
+esptool.py --chip esp32s2 --port <PORT> --baud 921600 --before default_reset --after hard_reset write_flash -z 0x290000 spiffs.bin
+```
